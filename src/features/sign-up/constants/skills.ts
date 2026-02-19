@@ -1,0 +1,31 @@
+export const SUGGESTED_SKILLS = [
+  'django',
+  'http',
+  'fastapi',
+  'java',
+  'restapi',
+  'python',
+  'react',
+  'typescript',
+  'nodejs',
+  'postgresql',
+  'mongodb',
+  'docker',
+  'kubernetes',
+  'aws',
+  'graphql',
+  'redis',
+  'elasticsearch',
+  'microservices',
+  'ci/cd',
+  'git',
+];
+
+export const POPULAR_SKILLS = [
+  'python',
+  'javascript',
+  'typescript',
+  'java',
+  'react',
+  'nodejs',
+];

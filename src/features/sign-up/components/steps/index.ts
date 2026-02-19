@@ -1,0 +1,9 @@
+export { InitialStep } from './InitialStep';
+export { EmailStep } from './EmailStep';
+export { PasswordStep } from './PasswordStep';
+export { OTPStep } from './OTPStep';
+export { NameStep } from './NameStep';
+export { MarketRegionStep } from './MarketRegionStep';
+export { SkillsStep } from './SkillsStep';
+export { TargetJobStep } from './TargetJobStep';
+export { AnalyzingStep } from './AnalyzingStep';
