@@ -1,0 +1,145 @@
+/**
+ * Countries and cities data for onboarding
+ */
+
+export interface Country {
+  code: string;
+  name: string;
+  flag: string;
+  cities: string[];
+}
+
+export const COUNTRIES: Country[] = [
+  {
+    code: 'US',
+    name: 'United States',
+    flag: '🇺🇸',
+    cities: [
+      'New York',
+      'Los Angeles',
+      'Chicago',
+      'Houston',
+      'Phoenix',
+      'San Francisco',
+      'Seattle',
+      'Boston',
+      'Austin',
+      'Denver',
+      'Miami',
+      'Atlanta',
+      'Dallas',
+      'San Diego',
+      'Portland',
+    ],
+  },
+  {
+    code: 'KZ',
+    name: 'Kazakhstan',
+    flag: '🇰🇿',
+    cities: [
+      'Almaty',
+      'Astana',
+      'Shymkent',
+      'Karaganda',
+      'Aktobe',
+      'Taraz',
+      'Pavlodar',
+      'Oskemen',
+      'Semey',
+      'Atyrau',
+      'Kostanay',
+      'Kyzylorda',
+      'Oral',
+      'Petropavl',
+      'Aktau',
+    ],
+  },
+  {
+    code: 'GB',
+    name: 'United Kingdom',
+    flag: '🇬🇧',
+    cities: [
+      'London',
+      'Manchester',
+      'Birmingham',
+      'Leeds',
+      'Glasgow',
+      'Liverpool',
+      'Bristol',
+      'Edinburgh',
+      'Sheffield',
+      'Cambridge',
+    ],
+  },
+  {
+    code: 'DE',
+    name: 'Germany',
+    flag: '🇩🇪',
+    cities: [
+      'Berlin',
+      'Munich',
+      'Hamburg',
+      'Frankfurt',
+      'Cologne',
+      'Stuttgart',
+      'Düsseldorf',
+      'Dresden',
+      'Leipzig',
+      'Hannover',
+    ],
+  },
+  {
+    code: 'CA',
+    name: 'Canada',
+    flag: '🇨🇦',
+    cities: [
+      'Toronto',
+      'Vancouver',
+      'Montreal',
+      'Calgary',
+      'Ottawa',
+      'Edmonton',
+      'Winnipeg',
+      'Quebec City',
+      'Halifax',
+      'Victoria',
+    ],
+  },
+  {
+    code: 'AU',
+    name: 'Australia',
+    flag: '🇦🇺',
+    cities: [
+      'Sydney',
+      'Melbourne',
+      'Brisbane',
+      'Perth',
+      'Adelaide',
+      'Gold Coast',
+      'Canberra',
+      'Newcastle',
+      'Hobart',
+      'Darwin',
+    ],
+  },
+  {
+    code: 'AE',
+    name: 'UAE',
+    flag: '🇦🇪',
+    cities: [
+      'Dubai',
+      'Abu Dhabi',
+      'Sharjah',
+      'Ajman',
+      'Ras Al Khaimah',
+      'Fujairah',
+      'Al Ain',
+    ],
+  },
+  {
+    code: 'SG',
+    name: 'Singapore',
+    flag: '🇸🇬',
+    cities: ['Singapore'],
+  },
+];
