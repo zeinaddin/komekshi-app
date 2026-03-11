@@ -1,45 +1,98 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { Screen } from '../../../shared/components/layout';
 import { Button, Input, Text } from '../../../shared/components/ui';
 import { useAppTheme } from '../../../shared/theme';
+import { useAuthStore } from '../../../shared/stores';
+import { authService } from '../../../shared/api/services';
+import { getErrorMessage } from '../../../shared/api/client';
 
 export function SignInScreen() {
   const theme = useAppTheme();
   const router = useRouter();
 
+  const { login, isLoading, error, clearError } = useAuthStore();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const handleSignIn = async () => {
-    setIsLoading(true);
-    // TODO: Implement actual sign in logic
+    if (!email || !password) {
+      setLocalError('Please enter email and password');
+      return;
+    }
+
+    setLocalError(null);
+    clearError();
+
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      router.replace('/(tabs)');
-    } catch (error) {
-      console.error('Sign in error:', error);
-    } finally {
-      setIsLoading(false);
+      await login(email, password);
+      const user = useAuthStore.getState().user;
+      if (user?.is_onboarding_completed) {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/onboarding');
+      }
+    } catch (err) {
+      setLocalError(getErrorMessage(err));
     }
   };
 
   const handleGoogleSignIn = async () => {
-    // TODO: Implement Google sign in
-    console.log('Google sign in');
+    try {
+      const authUrl = authService.getGoogleOAuthUrl();
+      const result = await WebBrowser.openAuthSessionAsync(authUrl);
+      if (result.type === 'success' && result.url) {
+        // The callback URL would contain tokens - handle accordingly
+        // For now, re-initialize auth state
+        await useAuthStore.getState().initialize();
+        const user = useAuthStore.getState().user;
+        if (user) {
+          if (user.is_onboarding_completed) {
+            router.replace('/(tabs)');
+          } else {
+            router.replace('/onboarding');
+          }
+        }
+      }
+    } catch (err) {
+      setLocalError(getErrorMessage(err));
+    }
   };
 
   const handleForgotPassword = () => {
-    // TODO: Navigate to forgot password screen
-    console.log('Forgot password');
+    Alert.alert(
+      'Reset Password',
+      'Enter your email above, then we will send you an OTP to reset your password.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send OTP',
+          onPress: async () => {
+            if (!email) {
+              setLocalError('Please enter your email first');
+              return;
+            }
+            try {
+              await authService.sendOtp(email);
+              Alert.alert('Success', 'Check your email for the OTP code');
+            } catch (err) {
+              setLocalError(getErrorMessage(err));
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleSignUp = () => {
     router.push('/sign-up');
   };
+
+  const displayError = localError || error;
 
   return (
     <Screen
@@ -57,13 +110,35 @@ export function SignInScreen() {
         </Text>
       </View>
 
+      {/* Error Message */}
+      {displayError && (
+        <View
+          style={[
+            styles.errorContainer,
+            {
+              marginTop: theme.spacing.lg,
+              backgroundColor: '#FEE2E2',
+              padding: theme.spacing.md,
+              borderRadius: theme.borderRadius.md,
+            },
+          ]}
+        >
+          <Text variant="bodySmall" style={{ color: theme.colors.error?.light || '#EF4444' }}>
+            {displayError}
+          </Text>
+        </View>
+      )}
+
       {/* Form */}
       <View style={[styles.form, { marginTop: theme.spacing.xxl }]}>
         <Input
           label="Your Email"
           placeholder="email@example.com"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(text) => {
+            setEmail(text);
+            setLocalError(null);
+          }}
           keyboardType="email-address"
           autoCapitalize="none"
           autoComplete="email"
@@ -74,7 +149,10 @@ export function SignInScreen() {
           label="Password"
           placeholder="Enter your password"
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(text) => {
+            setPassword(text);
+            setLocalError(null);
+          }}
           secureTextEntry
           autoCapitalize="none"
           autoComplete="password"
@@ -142,6 +220,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   header: {},
+  errorContainer: {},
   form: {},
   forgotPassword: {
     alignSelf: 'flex-end',

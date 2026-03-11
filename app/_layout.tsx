@@ -1,25 +1,55 @@
 import 'react-native-reanimated';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ThemeProvider } from '@/src/shared/theme';
+import { useAuthStore } from '@/src/shared/stores';
 
 export {
-  // Catch any errors thrown by the Layout component.
   ErrorBoundary,
 } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
   initialRouteName: 'index',
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
+function useProtectedRoute() {
+  const segments = useSegments();
+  const router = useRouter();
+  const { isAuthenticated, isInitialized, user } = useAuthStore();
+
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const firstSegment = segments[0] as string | undefined;
+    const inAuthGroup = firstSegment === 'sign-in' || firstSegment === 'sign-up' || firstSegment === 'index' || !firstSegment;
+    const inOnboarding = firstSegment === 'onboarding';
+
+    // Consider onboarding complete if the flag is true OR if user has a complete profile
+    const hasCompleteProfile = Boolean(
+      user?.name && user?.city_id && user?.direction_id
+    );
+    const isOnboardingComplete = user?.is_onboarding_completed || hasCompleteProfile;
+
+    if (!isAuthenticated && !inAuthGroup) {
+      router.replace('/sign-in');
+    } else if (isAuthenticated && inAuthGroup) {
+      if (isOnboardingComplete) {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/onboarding');
+      }
+    } else if (isAuthenticated && !isOnboardingComplete && !inOnboarding && !inAuthGroup) {
+      router.replace('/onboarding');
+    }
+  }, [isAuthenticated, isInitialized, user, segments]);
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -27,18 +57,24 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
+  const initialize = useAuthStore((state) => state.initialize);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
+
   useEffect(() => {
     if (error) throw error;
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
+    initialize();
+  }, []);
+
+  useEffect(() => {
+    if (loaded && isInitialized) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [loaded, isInitialized]);
 
-  if (!loaded) {
+  if (!loaded || !isInitialized) {
     return null;
   }
 
@@ -46,6 +82,8 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
+  useProtectedRoute();
+
   return (
     <SafeAreaProvider>
       <ThemeProvider>

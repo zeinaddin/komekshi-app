@@ -4,15 +4,18 @@ import { Button, Input, Text } from '@/src/shared/components/ui';
 import { useAppTheme } from '@/src/shared/theme';
 import { useSignUp } from '../../context/SignUpContext';
 import { StepContainer } from '../layout/StepContainer';
+import { authService } from '@/src/shared/api/services';
+import { getErrorMessage } from '@/src/shared/api/client';
 
 export function OTPStep() {
   const theme = useAppTheme();
-  const { state, setOtpCode, goNext, goBack, stepNumber, totalSteps } = useSignUp();
+  const { state, setOtpCode, setError, clearError, goNext, goBack, stepNumber, totalSteps } = useSignUp();
   const [isSending, setIsSending] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Auto-send OTP when step is entered
     handleSendOTP();
   }, []);
 
@@ -24,23 +27,52 @@ export function OTPStep() {
   }, [countdown]);
 
   const handleSendOTP = async () => {
-    if (countdown > 0) return;
+    if (countdown > 0 || isSending) return;
 
     setIsSending(true);
-    // Simulate OTP sending
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsSending(false);
-    setCountdown(60); // 60 second cooldown
+    setLocalError(null);
+    clearError('otp');
+
+    try {
+      await authService.sendOtp(state.email);
+      setCountdown(60);
+    } catch (error) {
+      const message = getErrorMessage(error);
+      if (message.toLowerCase().includes('not expired')) {
+        setCountdown(60);
+      } else {
+        setLocalError(message);
+      }
+    } finally {
+      setIsSending(false);
+    }
   };
 
-  const handleVerify = () => {
-    // In a real app, verify OTP with backend
-    if (state.otpCode.length >= 4) {
+  const handleVerify = async () => {
+    if (state.otpCode.length < 4 || isVerifying) return;
+
+    setIsVerifying(true);
+    setLocalError(null);
+    clearError('otp');
+
+    try {
+      await authService.verifyOtpAndRegister({
+        email: state.email,
+        password: state.password,
+        code: state.otpCode,
+      });
       goNext();
+    } catch (error) {
+      const message = getErrorMessage(error);
+      setLocalError(message);
+      setError('otp', message);
+    } finally {
+      setIsVerifying(false);
     }
   };
 
   const isValid = state.otpCode.length >= 4;
+  const displayError = localError || state.errors.otp;
 
   return (
     <StepContainer
@@ -68,14 +100,34 @@ export function OTPStep() {
           We sent a code to {state.email}
         </Text>
 
+        {displayError && (
+          <View
+            style={[
+              styles.errorContainer,
+              {
+                backgroundColor: '#FEE2E2',
+                padding: theme.spacing.md,
+                borderRadius: theme.borderRadius.md,
+                marginBottom: theme.spacing.md,
+              },
+            ]}
+          >
+            <Text variant="bodySmall" style={{ color: theme.colors.error?.light || '#EF4444' }}>
+              {displayError}
+            </Text>
+          </View>
+        )}
+
         <Input
-          placeholder="otp code"
+          placeholder="Enter OTP code"
           value={state.otpCode}
-          onChangeText={setOtpCode}
+          onChangeText={(text) => {
+            setOtpCode(text);
+            setLocalError(null);
+          }}
           keyboardType="number-pad"
           maxLength={6}
           autoFocus
-          error={state.errors.otp}
         />
 
         {isValid && (
@@ -83,6 +135,7 @@ export function OTPStep() {
             onPress={handleVerify}
             variant="ghost"
             size="md"
+            loading={isVerifying}
             style={{ marginTop: theme.spacing.md }}
           >
             Verify & Continue
@@ -97,4 +150,5 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  errorContainer: {},
 });
