@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,23 +7,8 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Text } from '@/src/shared/components/ui';
 import { useAppTheme } from '@/src/shared/theme';
+import { useAuthStore } from '@/src/shared/stores';
 
-// Mock user data - in real app this would come from context/store
-const USER_DATA = {
-  name: 'Aisana',
-  email: 'aisana@example.com',
-  avatar: null, // placeholder - will use initials
-  region: {
-    country: 'Kazakhstan',
-    city: 'Almaty',
-  },
-  targetJob: {
-    title: 'Backend Engineer',
-    subtitle: 'Backend Development',
-    salary: '$80K - $120K',
-  },
-  skills: ['Python', 'Django', 'FastAPI', 'PostgreSQL', 'Docker', 'AWS'],
-};
 
 interface ProfileSectionProps {
   title: string;
@@ -54,9 +39,11 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const theme = useAppTheme();
+  const { user, logout } = useAuthStore();
 
-  const handleLogout = () => {
-    // In real app, clear auth state and navigate to login
+  const handleLogout = async () => {
+    // Clear auth state and tokens, then navigate to sign-in
+    await logout();
     router.replace('/sign-in');
   };
 
@@ -64,7 +51,29 @@ export default function ProfileScreen() {
     // Navigate to edit profile screen
   };
 
-  const initials = USER_DATA.name
+  // Get user data from auth store
+  const userName = user?.name || 'User';
+  const userEmail = user?.email || '';
+  const userCountry = user?.city?.country?.name || 'Not set';
+  const userCity = user?.city?.name || 'Not set';
+  const userDirection = user?.direction?.name || 'Not set';
+
+  // Skills can come from 'skills' array or 'modules' array (with nested skill object)
+  const userSkills: string[] = (() => {
+    // First try direct skills array
+    if (user?.skills && user.skills.length > 0) {
+      return user.skills.map((s) => s.name).filter(Boolean);
+    }
+    // Fallback to modules array (skill is nested)
+    if (user?.modules && user.modules.length > 0) {
+      return user.modules
+        .map((m) => m.skill?.name)
+        .filter((name): name is string => Boolean(name));
+    }
+    return [];
+  })();
+
+  const initials = userName
     .split(' ')
     .map((n) => n[0])
     .join('')
@@ -101,54 +110,51 @@ export default function ProfileScreen() {
             end={{ x: 1, y: 1 }}
             style={styles.avatarGradient}
           >
-            {USER_DATA.avatar ? (
-              <Image source={{ uri: USER_DATA.avatar }} style={styles.avatarImage} />
-            ) : (
-              <Text style={styles.avatarInitials}>{initials}</Text>
-            )}
+            <Text style={styles.avatarInitials}>{initials}</Text>
           </LinearGradient>
-          <Text style={[styles.userName, {color: theme.colors.text.primary}]}>{USER_DATA.name}</Text>
-          <Text style={[styles.userEmail, {color: theme.colors.text.tertiary}]}>{USER_DATA.email}</Text>
+          <Text style={[styles.userName, {color: theme.colors.text.primary}]}>{userName}</Text>
+          <Text style={[styles.userEmail, {color: theme.colors.text.tertiary}]}>{userEmail}</Text>
         </Animated.View>
 
         {/* Target Job Section */}
-        <ProfileSection title="Target Position" icon="briefcase-outline" delay={200} theme={theme}>
-          <View style={[styles.jobCard, {backgroundColor: theme.colors.surface}]}>
-            <View style={styles.jobInfo}>
-              <Text style={[styles.jobTitle, {color: theme.colors.text.primary}]}>{USER_DATA.targetJob.title}</Text>
-              <Text style={[styles.jobSubtitle, {color: theme.colors.text.tertiary}]}>{USER_DATA.targetJob.subtitle}</Text>
+        {userDirection !== 'Not set' && (
+          <ProfileSection title="Target Position" icon="briefcase-outline" delay={200} theme={theme}>
+            <View style={[styles.jobCard, {backgroundColor: theme.colors.surface}]}>
+              <View style={styles.jobInfo}>
+                <Text style={[styles.jobTitle, {color: theme.colors.text.primary}]}>{userDirection}</Text>
+                <Text style={[styles.jobSubtitle, {color: theme.colors.text.tertiary}]}>Career Direction</Text>
+              </View>
             </View>
-            <View style={[styles.salaryBadge, {backgroundColor: theme.colors.success.light + '20'}]}>
-              <Text style={[styles.salaryText, {color: theme.colors.success.light}]}>{USER_DATA.targetJob.salary}</Text>
-            </View>
-          </View>
-        </ProfileSection>
+          </ProfileSection>
+        )}
 
         {/* Region Section */}
         <ProfileSection title="Market Region" icon="location-outline" delay={300} theme={theme}>
           <View style={[styles.regionCard, {backgroundColor: theme.colors.surface}]}>
             <View style={styles.regionRow}>
               <Ionicons name="flag-outline" size={18} color={theme.colors.text.secondary} />
-              <Text style={[styles.regionText, {color: theme.colors.text.primary}]}>{USER_DATA.region.country}</Text>
+              <Text style={[styles.regionText, {color: theme.colors.text.primary}]}>{userCountry}</Text>
             </View>
             <View style={[styles.regionDivider, {backgroundColor: theme.colors.border.default}]} />
             <View style={styles.regionRow}>
               <Ionicons name="business-outline" size={18} color={theme.colors.text.secondary} />
-              <Text style={[styles.regionText, {color: theme.colors.text.primary}]}>{USER_DATA.region.city}</Text>
+              <Text style={[styles.regionText, {color: theme.colors.text.primary}]}>{userCity}</Text>
             </View>
           </View>
         </ProfileSection>
 
         {/* Skills Section */}
-        <ProfileSection title="Skills" icon="code-slash-outline" delay={400} theme={theme}>
-          <View style={[styles.skillsContainer, {backgroundColor: theme.colors.surface}]}>
-            {USER_DATA.skills.map((skill) => (
-              <View key={skill} style={[styles.skillChip, {backgroundColor: theme.colors.primary[50]}]}>
-                <Text style={[styles.skillText, {color: theme.colors.primary[500]}]}>{skill}</Text>
-              </View>
-            ))}
-          </View>
-        </ProfileSection>
+        {userSkills.length > 0 && (
+          <ProfileSection title="Skills" icon="code-slash-outline" delay={400} theme={theme}>
+            <View style={[styles.skillsContainer, {backgroundColor: theme.colors.surface}]}>
+              {userSkills.map((skill) => (
+                <View key={skill} style={[styles.skillChip, {backgroundColor: theme.colors.primary[50]}]}>
+                  <Text style={[styles.skillText, {color: theme.colors.primary[500]}]}>{skill}</Text>
+                </View>
+              ))}
+            </View>
+          </ProfileSection>
+        )}
 
         {/* Account Actions */}
         <Animated.View
